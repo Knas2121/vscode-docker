@@ -27,6 +27,7 @@ const config = {
     entry: {
         './extension.bundle': './src/extension.ts',
         './dockerfile-language-server-nodejs/lib/server': './node_modules/dockerfile-language-server-nodejs/lib/server.js',
+        './compose-language-service/lib/server': './node_modules/compose-language-service/lib/server.js',
     }, // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/
     output: {
         // the bundle is stored in the 'dist' folder (check package.json), 📖 -> https://webpack.js.org/configuration/output/

@@ -132,6 +132,7 @@ export async function activateInternal(ctx: vscode.ExtensionContext, perfStats: 
         registerTaskProviders(ctx);
 
         activateLanguageClient(ctx);
+        activateComposeLanguageClient(ctx);
 
         registerListeners();
     });
@@ -276,6 +277,65 @@ function activateLanguageClient(ctx: vscode.ExtensionContext): void {
         client = new LanguageClient(
             "dockerfile-langserver",
             "Dockerfile Language Server",
+            serverOptions,
+            clientOptions
+        );
+        client.registerProposedFeatures();
+        /* eslint-disable-next-line @typescript-eslint/no-floating-promises */
+        client.onReady().then(() => {
+            // attach the VS Code settings listener
+            Configuration.initialize(ctx);
+        });
+
+        ctx.subscriptions.push(client.start());
+    });
+}
+
+function activateComposeLanguageClient(ctx: vscode.ExtensionContext): void {
+    // Don't wait
+    void callWithTelemetryAndErrorHandling('docker.composelanguageclient.activate', async (context: IActionContext) => {
+        context.telemetry.properties.isActivationEvent = 'true';
+        const serverModule = ext.context.asAbsolutePath(
+            path.join(
+                "dist",
+                "compose-language-service",
+                "lib",
+                "server.js"
+            )
+        );
+
+        const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] };
+
+        const serverOptions: ServerOptions = {
+            run: {
+                module: serverModule,
+                transport: TransportKind.ipc,
+                args: ["--node-ipc"]
+            },
+            debug: {
+                module: serverModule,
+                transport: TransportKind.ipc,
+                options: debugOptions
+            }
+        };
+
+        const middleware: Middleware = {
+            workspace: {
+                configuration: Configuration.computeConfiguration
+            }
+        };
+
+        const clientOptions: LanguageClientOptions = {
+            documentSelector: [{ language: 'dockercompose', scheme: 'file' }],
+            synchronize: {
+                fileEvents: vscode.workspace.createFileSystemWatcher("**/.clientrc")
+            },
+            middleware: middleware
+        };
+
+        client = new LanguageClient(
+            "composefile-langserver",
+            "Compose Language Server",
             serverOptions,
             clientOptions
         );
